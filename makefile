@@ -2,7 +2,7 @@ all:
 	go install hello
 
 run:
-	$GOPATH/bin/hello
+	${GOPATH}/bin/hello
 
 clean:
-	rm $GOPATH/bin/*
+	rm ${GOPATH}/bin/*
