@@ -5,7 +5,7 @@ import (
 	"net/http"
 	"io/ioutil"
 	"io"
-	"fmt"
+	//"fmt"
 	"encoding/xml"
 	//"os"
 )
@@ -26,14 +26,18 @@ type Comment struct {
 }
 
 var templates = template.Must(template.ParseFiles("upload.html", "index.html"))
+var pics = loadXML("picts.xml")
 
 func loadXML(filename string) PictureList {
 	xmlFile, _ := ioutil.ReadFile(filename)
-	fmt.Printf("%s\n", xmlFile)
-
 	var pics PictureList
 	xml.Unmarshal(xmlFile, &pics)
 	return pics
+}
+
+func saveXML(filename string, pics PictureList) {
+	bytes, _ := xml.Marshal(&pics)
+	ioutil.WriteFile(filename, bytes, 0600)
 }
 
 func renderTemplate(w http.ResponseWriter, tmpl string, data []byte) {
@@ -65,6 +69,8 @@ func uploadHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), 500)
 		return
 	}
+	pics.Pictures = append(pics.Pictures, Picture{Filename: t.Name()})
+	saveXML("picts.xml", pics)
 	http.Redirect(w, r, "/", 302)
 }
 
@@ -75,13 +81,15 @@ func viewHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func indexHandler(w http.ResponseWriter, r *http.Request) {
+	/*
 	files, err := ioutil.ReadDir("pictures/")
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}
+	*/
 	var list []byte
-	for _, file := range files {
-		filename := file.Name()
+	for _, pic := range pics.Pictures {
+		filename := pic.Filename[9:]
 		list = append(list, "<a href=\"/view?id="+filename[6:]+"\">"+
 			"<img src=\"data:image/jpg;base64,"+filename+"\" alt=\""+filename+"\" style=\"width:420px;height:420px;border:0\"></a>\n"...)
 		//list = append(list, file.Name()...)
@@ -92,7 +100,6 @@ func indexHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func main() {
-	loadXML("picts.xml")
 	http.HandleFunc("/", indexHandler)
 	http.HandleFunc("/view", viewHandler)
 	http.HandleFunc("/upload", uploadHandler)
