@@ -119,16 +119,15 @@ func viewHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func indexHandler(w http.ResponseWriter, r *http.Request) {
-	var list []byte
-	for _, pic := range pics.Pictures {
-		filename := pic.Filename[9:]
-		list = append(list, "<a href=\"/view?id="+filename[6:]+"\">"+
-			"<img src=\"data:image/jpg;base64,"+filename+"\" alt=\""+filename+"\" style=\"width:420px;height:420px;border:0\"></a>\n"...)
+	fPics := pics
+	for i, pic := range fPics.Pictures {
+		bytes, _ := ioutil.ReadFile(pic.Filename)
+		fPics.Pictures[i].Image = base64.StdEncoding.EncodeToString(bytes)
 	}
-	err := templates.ExecuteTemplate(w, "index.html", template.HTML(list))
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-		}
+	err := templates.ExecuteTemplate(w, "index.html", fPics)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+	}
 }
 
 func commentHandler(w http.ResponseWriter, r *http.Request) {
