@@ -5,8 +5,19 @@ import (
 	"net/http"
 	"io/ioutil"
 	"io"
-	"fmt"
+	//"fmt"
 )
+
+type Picture struct {
+	Title    string
+	Filename string
+	Comments []Comment
+}
+
+type Comment struct {
+	Name    string
+	Message string
+}
 
 var templates = template.Must(template.ParseFiles("upload.html", "index.html"))
 
@@ -39,12 +50,13 @@ func uploadHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), 500)
 		return
 	}
-	http.Redirect(w, r, "/view?id="+t.Name()[6:], 302)
+	http.Redirect(w, r, "/", 302)
 }
 
 func viewHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "image")
-	http.ServeFile(w, r, "pictures/image-"+r.FormValue("id"))
+	path := "pictures/image-"+r.FormValue("id")
+	http.ServeFile(w, r, path)
 }
 
 func indexHandler(w http.ResponseWriter, r *http.Request) {
@@ -60,12 +72,13 @@ func indexHandler(w http.ResponseWriter, r *http.Request) {
 		//list = append(list, file.Name()...)
 		//list = append(list, "&#13;&#10;"...)
 	}
-	fmt.Printf("%s\n", list)
+	//fmt.Printf("%s\n", list)
 	renderTemplate(w, "index", list)
 }
 
 func main() {
 	http.HandleFunc("/", indexHandler)
 	http.HandleFunc("/view", viewHandler)
+	http.HandleFunc("/upload", uploadHandler)
 	http.ListenAndServe(":8080", nil)
 }
