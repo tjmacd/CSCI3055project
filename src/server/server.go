@@ -40,7 +40,7 @@ func uploadHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	defer f.Close()
-	t, err := ioutil.TempFile(".", "image-")
+	t, err := ioutil.TempFile("./pictures", "image-")
 	if err != nil {
 		http.Error(w, err.Error(), 500)
 		return
