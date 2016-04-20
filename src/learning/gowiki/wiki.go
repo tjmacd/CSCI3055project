@@ -10,10 +10,12 @@ import (
 type Page struct {
 	Title string
 	Body  []byte
+	DisplayBody template.HTML
 }
 
 var templates = template.Must(template.ParseFiles("edit.html", "view.html"))
 var validPath = regexp.MustCompile("^/(edit|save|view)/([a-zA-Z0-9]+)$")
+var linkRegexp = regexp.MustCompile("\\[([a-zA-Z0-9]+)\\]")
 
 func (p *Page) save() error {
 	filename := p.Title + ".txt"
@@ -42,6 +44,13 @@ func viewHandler(w http.ResponseWriter, r *http.Request, title string) {
 		http.Redirect(w, r, "/edit/"+title, http.StatusFound)
 		return
 	}
+	escapedBody := []byte(template.HTMLEscapeString(string(p.Body)))
+	p.DisplayBody = template.HTML(linkRegexp.ReplaceAllFunc(escapedBody,
+		func(str []byte) []byte {
+			matched := linkRegexp.FindStringSubmatch(string(str))
+			out := []byte("<a href=\"/view/"+matched[1]+"\">"+matched[1]+"</a>")
+			return out
+		}))
 	renderTemplate(w, "view", p)
 }
 
