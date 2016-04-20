@@ -5,13 +5,19 @@ import (
 	"net/http"
 	"io/ioutil"
 	"io"
-	//"fmt"
+	"fmt"
+	"encoding/xml"
+	//"os"
 )
+
+type PictureList struct {
+	Pictures []Picture `xml:"Picture"`
+}
 
 type Picture struct {
 	Title    string
 	Filename string
-	Comments []Comment
+	Comments []Comment `xml:"Comment"`
 }
 
 type Comment struct {
@@ -20,6 +26,15 @@ type Comment struct {
 }
 
 var templates = template.Must(template.ParseFiles("upload.html", "index.html"))
+
+func loadXML(filename string) PictureList {
+	xmlFile, _ := ioutil.ReadFile(filename)
+	fmt.Printf("%s\n", xmlFile)
+
+	var pics PictureList
+	xml.Unmarshal(xmlFile, &pics)
+	return pics
+}
 
 func renderTemplate(w http.ResponseWriter, tmpl string, data []byte) {
 	fList := template.HTML(data)
@@ -77,6 +92,7 @@ func indexHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func main() {
+	loadXML("picts.xml")
 	http.HandleFunc("/", indexHandler)
 	http.HandleFunc("/view", viewHandler)
 	http.HandleFunc("/upload", uploadHandler)
