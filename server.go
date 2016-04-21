@@ -7,7 +7,6 @@ import (
 	"io"
 	"fmt"
 	"encoding/xml"
-	//"os"
 	"encoding/base64"
 	"regexp"
 )
