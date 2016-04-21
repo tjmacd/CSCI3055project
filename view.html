@@ -3,7 +3,7 @@
 	<title>{{.Title}}</title>
 </head>
 
-<h1>{{.Title}}</h1>
+
 <img src="data:image/jpg;base64,{{.Image}}" alt="{{.Filename}}" style="width:420px;height:420px;border:0">
 
 
@@ -14,7 +14,7 @@
 		{{$value.Message}}</p>
 	{{ end }}
 	
-	<form action="/comment/{{.ID}}" method="POST">
+	<form action="/comment?id={{.ID}}" method="POST">
 		<div><textarea name="name" rows="1" cols="40"></textarea></div>
 <div><textarea name="message" rows="4" cols="40"></textarea></div>
 <div><input type="submit" value="Comment"></div>

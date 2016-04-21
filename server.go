@@ -16,6 +16,35 @@ type PictureList struct {
 	Pictures []Picture `xml:"Picture"`
 }
 
+type Picture struct {
+	Title    string
+	Filename string
+	Image    string
+	ID       string
+	Comments []Comment `xml:"Comment"`
+}
+
+type Comment struct {
+	Name    string
+	Message string
+}
+
+var templates = template.Must(template.ParseFiles("upload.html", "index.html", "view.html"))
+var pics = loadXML("picts.xml")
+var validPath = regexp.MustCompile("^/(upload|comment|view)$")
+
+func loadXML(filename string) PictureList {
+	xmlFile, _ := ioutil.ReadFile(filename)
+	var pics PictureList
+	xml.Unmarshal(xmlFile, &pics)
+	return pics
+}
+
+func saveXML(filename string, pics PictureList) {
+	bytes, _ := xml.Marshal(&pics)
+	ioutil.WriteFile(filename, bytes, 0600)
+}
+
 func (l *PictureList) GetPicture(filename string) Picture {
 	for _, pic := range l.Pictures {
 		if pic.Filename == filename {
@@ -34,40 +63,6 @@ func (l *PictureList) AddComment(ID string, comment Comment) {
 	}
 }
 
-type Picture struct {
-	Title    string
-	Filename string
-	Image    string
-	ID       string
-	Comments []Comment `xml:"Comment"`
-}
-
-type Comment struct {
-	Name    string
-	Message string
-}
-
-var templates = template.Must(template.ParseFiles("upload.html", "index.html", "view.html"))
-var pics = loadXML("picts.xml")
-var validPath = regexp.MustCompile("^/(index|upload|comment|view)/([a-zA-Z0-9]+)$")
-
-func loadXML(filename string) PictureList {
-	xmlFile, _ := ioutil.ReadFile(filename)
-	var pics PictureList
-	xml.Unmarshal(xmlFile, &pics)
-	return pics
-}
-
-func saveXML(filename string, pics PictureList) {
-	bytes, _ := xml.Marshal(&pics)
-	ioutil.WriteFile(filename, bytes, 0600)
-}
-
-func renderTemplate(w http.ResponseWriter, tmpl string, pic *Picture) {
-	//fList := template.HTML(data)
-	
-}
-
 func uploadHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method != "POST" {
 		err := templates.ExecuteTemplate(w, "upload.html", nil)
@@ -78,51 +73,51 @@ func uploadHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	f, _, err := r.FormFile("image")
 	if err != nil {
-		http.Error(w, err.Error(), 500)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 	defer f.Close()
 	t, err := ioutil.TempFile("./pictures", "image-")
 	if err != nil {
-		http.Error(w, err.Error(), 500)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 	defer t.Close()
 	if _, err := io.Copy(t, f); err != nil {
-		http.Error(w, err.Error(), 500)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 	filename := t.Name()
-	//fmt.Println(filename, filename[15:])
 	pics.Pictures = append(pics.Pictures, Picture{Filename: filename, ID: filename[15:]})
 	saveXML("picts.xml", pics)
-	http.Redirect(w, r, "/", 302)
+	http.Redirect(w, r, "/index", 302)
 }
 
 func viewHandler(w http.ResponseWriter, r *http.Request) {
+	fmt.Println(r.URL.Path)
 	path := "pictures/image-"+r.FormValue("id")
 	pic := pics.GetPicture(path)
-	/*
-	if pic == nil {
-		http.Error(w, "File not found", http.StatusInternalServerError)
-		return
-	}*/
 	if pic.Title == "" {
 		pic.Title = pic.Filename[9:]
 	}
-	bytes, _ := ioutil.ReadFile(path)
-	pic.Image = base64.StdEncoding.EncodeToString(bytes)
+	bytesStr, _ := encodeImage(pic)
+	pic.Image = bytesStr
 	err := templates.ExecuteTemplate(w, "view.html", pic)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}
 }
 
+func encodeImage(pic Picture) (string, error) {
+	bytes, err := ioutil.ReadFile(pic.Filename)
+	return base64.StdEncoding.EncodeToString(bytes), err
+}
+
 func indexHandler(w http.ResponseWriter, r *http.Request) {
 	fPics := pics
 	for i, pic := range fPics.Pictures {
-		bytes, _ := ioutil.ReadFile(pic.Filename)
-		fPics.Pictures[i].Image = base64.StdEncoding.EncodeToString(bytes)
+		bytesStr, _ := encodeImage(pic)
+		fPics.Pictures[i].Image = bytesStr
 	}
 	err := templates.ExecuteTemplate(w, "index.html", fPics)
 	if err != nil {
@@ -131,9 +126,9 @@ func indexHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func commentHandler(w http.ResponseWriter, r *http.Request) {
+	fmt.Println(r.FormValue("id"))
 	m := validPath.FindStringSubmatch(r.URL.Path)
 	if m == nil {
-		fmt.Println(r.URL.Path)
 		http.NotFound(w, r)
 		return
 	}
@@ -141,15 +136,22 @@ func commentHandler(w http.ResponseWriter, r *http.Request) {
 	message := r.FormValue("message")
 	
 	comment := Comment{Name: name, Message: message}
-	pics.AddComment(m[2], comment)
+	pics.AddComment(r.FormValue("id"), comment)
 	saveXML("picts.xml", pics)
-	http.Redirect(w, r, "/view?id="+m[2], http.StatusFound)
+	http.Redirect(w, r, "/view?id="+r.FormValue("id"), http.StatusFound)
+}
+
+func rootHandler(w http.ResponseWriter, r *http.Request) {
+	fmt.Println(r.URL.Path)
+	http.Redirect(w, r, "/index", http.StatusFound)
 }
 
 func main() {
-	http.HandleFunc("/", indexHandler)
+	fmt.Println("Now serving image server...")
+	http.HandleFunc("/", rootHandler)
+	http.HandleFunc("/index", indexHandler)
 	http.HandleFunc("/view", viewHandler)
 	http.HandleFunc("/upload", uploadHandler)
-	http.HandleFunc("/comment/", commentHandler)
+	http.HandleFunc("/comment", commentHandler)
 	http.ListenAndServe(":8080", nil)
 }
