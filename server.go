@@ -94,7 +94,6 @@ func uploadHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func viewHandler(w http.ResponseWriter, r *http.Request) {
-	fmt.Println(r.URL.Path)
 	path := "pictures/image-"+r.FormValue("id")
 	pic := pics.GetPicture(path)
 	if pic.Title == "" {
@@ -126,7 +125,6 @@ func indexHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func commentHandler(w http.ResponseWriter, r *http.Request) {
-	fmt.Println(r.FormValue("id"))
 	m := validPath.FindStringSubmatch(r.URL.Path)
 	if m == nil {
 		http.NotFound(w, r)
@@ -134,7 +132,6 @@ func commentHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	name := r.FormValue("name")
 	message := r.FormValue("message")
-	
 	comment := Comment{Name: name, Message: message}
 	pics.AddComment(r.FormValue("id"), comment)
 	saveXML("picts.xml", pics)
@@ -142,7 +139,6 @@ func commentHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func rootHandler(w http.ResponseWriter, r *http.Request) {
-	fmt.Println(r.URL.Path)
 	http.Redirect(w, r, "/index", http.StatusFound)
 }
 
