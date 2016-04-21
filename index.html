@@ -10,7 +10,7 @@
 
 {{ range $index, $value := .Pictures }}
 <a href="/view?id={{$value.ID}}">
-	<img src="data:image/jpg;base64,{{$value.Image}}" alt="{{$value.Filename}}" style="width:420px;height:420px;border:0">
+	<img src="data:image/jpg;base64,{{$value.Image}}" alt="{{$value.Filename}}" style="width:420px;border:0">
 </a>
 {{ end }}
 
