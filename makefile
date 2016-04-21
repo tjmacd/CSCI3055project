@@ -1,8 +1,8 @@
 all:
-	go install hello
+	go build server.go
 
 run:
-	${GOPATH}/bin/hello
+	./server
 
 clean:
-	rm ${GOPATH}/bin/*
+	rm server
