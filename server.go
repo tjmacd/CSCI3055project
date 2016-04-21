@@ -31,7 +31,7 @@ type Comment struct {
 
 var templates = template.Must(template.ParseFiles("upload.html", "index.html", "view.html"))
 var pics = loadXML("picts.xml")
-var validPath = regexp.MustCompile("^/(upload|comment|view)$")
+var validPath = regexp.MustCompile("^/(index|upload|comment|view)?$")
 
 func loadXML(filename string) PictureList {
 	xmlFile, _ := ioutil.ReadFile(filename)
@@ -142,12 +142,23 @@ func rootHandler(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, "/index", http.StatusFound)
 }
 
+func makeHandler(fn func (http.ResponseWriter, *http.Request)) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		m := validPath.FindStringSubmatch(r.URL.Path)
+		if m == nil {
+			http.NotFound(w, r)
+			return
+		}
+		fn(w, r)
+	}
+}
+
 func main() {
 	fmt.Println("Now serving image server...")
-	http.HandleFunc("/", rootHandler)
-	http.HandleFunc("/index", indexHandler)
-	http.HandleFunc("/view", viewHandler)
-	http.HandleFunc("/upload", uploadHandler)
-	http.HandleFunc("/comment", commentHandler)
+	http.HandleFunc("/", makeHandler(rootHandler))
+	http.HandleFunc("/index", makeHandler(indexHandler))
+	http.HandleFunc("/view", makeHandler(viewHandler))
+	http.HandleFunc("/upload", makeHandler(uploadHandler))
+	http.HandleFunc("/comment", makeHandler(commentHandler))
 	http.ListenAndServe(":8080", nil)
 }
